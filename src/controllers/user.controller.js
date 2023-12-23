@@ -37,12 +37,12 @@ const registerUser= asyncHandler(async (req,res)=>{
 
 
     // check user already exist
-   const existedUser=  User.findOne( // checking for both username and email 
+   const existedUser=  await  User.findOne( // checking for both username and email 
       {
         $or: [{ email },{ username }]
       }
     )
-
+    
     if(existedUser){
         throw new ApiError(409,"User with email or usename already exists")
     }
@@ -55,7 +55,19 @@ const registerUser= asyncHandler(async (req,res)=>{
 
         const avatarLocalPath = req.files?.avatar[0]?.path // if files available then work , avatar was already declared in middleware in route 
                                    // 0th indexed object's path taking
-        const coverImageLocalPath = req.files?.coverImage[0]?.path
+        // const coverImageLocalPath = req.files?.coverImage[0]?.path
+
+        // because coverImageLocalPath is not checked so before storing data check 
+        let coverImageLocalPath; 
+        if(req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length >0 ){
+            // if req.files available and coverImage in it is an array and array length is greater than 0  then
+        coverImageLocalPath = req.files.coverImage[0].path; // coverImage is an array 
+
+        }
+
+        
+
+
 
         // avatar is compulsory so check avatar
         if(!avatarLocalPath){
@@ -64,8 +76,8 @@ const registerUser= asyncHandler(async (req,res)=>{
  
          // upload to cloudinary
         const avatar = await uploadOnCloudinary(avatarLocalPath);
-        const coverImage = await uploadOnCloudinary(coverImageLocalPath);
-
+        const coverImage = await uploadOnCloudinary(coverImageLocalPath); // if  coverImageLocalPath is empty then cloudinary  return null  not error 
+        
         if(!avatar){ // check if avatar is stored properly
             throw new ApiError(400,"Avatar file is required ")
         }

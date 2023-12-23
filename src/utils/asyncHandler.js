@@ -3,7 +3,7 @@
 // 1. promises /  then . catch
 
 const asyncHandler = (requestHandler) =>{
-    (req,res,next)=>
+  return  (req,res,next)=>
     Promise.resolve(requestHandler(req,res,next))
            .catch((error)=>next(error));
 }
@@ -25,7 +25,7 @@ export {asyncHandler}
 // const asyncHandler = (func)=> async(req,res,next)=>{// declaring async function inside the another function
 //     try {
 //         // function call 
-//         await func(req,res,next);
+//      return   await func(req,res,next);
         
         
 //     } catch (error) {

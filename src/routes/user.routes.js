@@ -1,7 +1,8 @@
 
 import { Router } from "express";
-import { registerUser } from "../controllers/user.controller.js";
+import { loginUser, registerUser,logoutUser, refreshAccessToken } from "../controllers/user.controller.js";
 const router = Router();
+import {verifyJWT} from '../middlewares/auth.middleware.js'
 
 import {upload} from "../middlewares/multer.middleware.js"
 
@@ -25,7 +26,19 @@ router.route("/register").post(
     registerUser) // http://localhost:8000/api/v1/users/register
                                               // /api/v1/users in comming from app.js
 
-// router.post('/register',registerUser);
+router.route("/login").post(
+    loginUser // controller 
+)
+
+// secured route------------------------
+router.route("/logout").post(
+    verifyJWT,// middleware which store req.user = user value
+    logoutUser //  controller 
+    )
+
+router.route("/refresh-token").post(
+    refreshAccessToken
+)
 
 
 

@@ -305,10 +305,167 @@ const refreshAccessToken = asyncHandler(async(req,res)=>{
 
 })
 
+const changeCurrentPassword = asyncHandler(async(req,res)=>{
+  try {
+     const {oldPassword, newPassword} = req.body;
+    const user = await User.findById(req.user?._id); // get req.user from auth  middleware
+  
+    const isPasswordCorrect = await user.isPasswordCorrect(oldPassword);
+  
+    if(!isPasswordCorrect){
+      throw new ApiError(401,"Invalid Old Password ")
+    }
+  
+       user.password = newPassword;
+        await user.save({validateBeforeSave:false})
+  
+        return res.status(200).json(
+          new ApiResponse(200,{},"Password changed successfully")
+        )
+  } catch (error) {
+       return res.status(500).json(
+        new ApiError(500,error.message || "Can not change Password ")
+       )
+  }
+
+})
+
+
+const getCurrentUser = asyncHandler(async(req,res)=>{
+     try {
+      return res.status(200).json( new ApiResponse(
+        200,
+        req.user,
+        "Current user fetched succesfully !"
+      ))
+
+     } catch (error) {
+       return res.status(404).json(
+        new ApiError(200,"User Can not be fetched ")
+       )
+     }
+})
+
+const updateAccountDetails = asyncHandler(async(req,res)=>{
+     try {
+      const {fullName,email} = req.body
+ 
+      if(!fullName || !email){
+       throw new ApiError(400,"All fields are required")
+      }
+ 
+     const user =  await User.findByIdAndUpdate(
+       req.user?._id,
+       {
+         $set:{
+           fullName,
+           email
+         }
+       },
+       { new:true }
+      )
+      .select("-password -refreshToken")
+ 
+     return res.status(200)
+     .json(
+       new ApiResponse(
+        200,user,"Account Details updated Successfully")
+     )
+
+
+     } catch (error) {
+         return res.status(500,error.message || "Can not update Account details ")
+     }
+     
+})
+
+const updateUserAvatar = asyncHandler( async(req,res)=>{
+      try {
+         // since using getting  file from multer middleware so use req.file not req.files 
+         // req.files is used if got multiple files in multer
+         const avatarLocalPath = req.file?.path;
+  
+         if(!avatarLocalPath){
+          throw new ApiError(400,"Avatar file is missing")
+         }
+  
+        const avatar =   await uploadOnCloudinary(avatarLocalPath)
+  
+        if(!avatar.url){
+          throw new ApiError(400,"Error while uploading on avatar")
+        }
+  
+        const user = await User.findByIdAndUpdate(
+          req.user?._id,
+          {
+            $set:{
+              avatar: avatar.url
+            }
+          },
+          {new:true}
+        ).select("-password -refreshToken")
+
+        return res.status(200).json(
+          new ApiResponse(200,user,"Avatar Image updated Successfully ")
+        )
+
+      } catch (error) {
+          return res.status(500).json(
+            new ApiError(500,error.message || "Can not update Avatar ")
+          )
+      }
+})
+
+
+const updateUserCoverImage = asyncHandler( async(req,res)=>{
+      try {
+         // taking single file in multer middleware 
+         const coverImageLocalPath = req.file?.path;
+  
+         if(!coverImageLocalPath){
+          throw new ApiError(400,"Cover Image file is missing")
+         }
+  
+        const coverImage =   await uploadOnCloudinary(coverImageLocalPath)
+  
+        if(!coverImage.url){
+          throw new ApiError(400,"Error while uploading on cover Image")
+        }
+  
+        const user = await User.findByIdAndUpdate(
+          req.user?._id,
+          {
+            $set:{
+              coverImage: coverImage.url
+            }
+          },
+          {new:true}
+        ).select("-password -refreshToken")
+
+        return res.status(200).json(
+          new ApiResponse(200,user,"Cover Image updated Successfully ")
+        )
+
+      } catch (error) {
+          return res.status(500).json(
+            new ApiError(500,error.message || "Can not update Cover Image ")
+          )
+      }
+})
+
+
+
+
 export {
   registerUser,
   loginUser,
   logoutUser,
-  refreshAccessToken
+  refreshAccessToken,
+  changeCurrentPassword,
+  getCurrentUser,
+  updateAccountDetails,
+  updateUserAvatar,
+  updateUserCoverImage
+
 
 }

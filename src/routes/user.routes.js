@@ -1,6 +1,6 @@
 
 import { Router } from "express";
-import { loginUser, registerUser,logoutUser, refreshAccessToken } from "../controllers/user.controller.js";
+import { loginUser, registerUser,logoutUser, refreshAccessToken, changeCurrentPassword, getCurrentUser, updateAccountDetails, updateUserAvatar, updateUserCoverImage, getUserChannelProfile, getWatchHistory } from "../controllers/user.controller.js";
 const router = Router();
 import {verifyJWT} from '../middlewares/auth.middleware.js'
 
@@ -40,7 +40,45 @@ router.route("/refresh-token").post(
     refreshAccessToken
 )
 
+router.route("/change-password").post(
+     verifyJWT,
+     changeCurrentPassword
+)
 
+router.route("/current-user").get(
+    verifyJWT,
+    getCurrentUser
+)
+
+// need to update specific data so patch
+router.route("/update-account").patch(
+      verifyJWT,
+      updateAccountDetails
+)
+
+router.route("/avatar").patch(
+    verifyJWT,
+    upload.single("avatar"),
+    updateUserAvatar
+    )
+
+
+router.route("/cover-image").patch(
+    verifyJWT,
+    upload.single("coverImage"),
+    updateUserCoverImage
+)
+
+// getting data from params so 
+router.route("/channel/:username").get(
+    verifyJWT,
+    getUserChannelProfile
+)
+
+router.route("/history").get(
+    verifyJWT,
+    getWatchHistory
+)
 
 
 

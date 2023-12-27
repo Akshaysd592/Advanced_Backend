@@ -4,6 +4,7 @@ import {User} from '../models/user.model.js';
 import {uploadOnCloudinary} from '../utils/cloudinary.js';
 import {ApiResponse} from '../utils/ApiResponse.js'
 import jwt from 'jsonwebtoken'
+import mongoose, { mongo } from "mongoose";
 
 // since this function of token generation will required to be implemented
 // again and again so directly creating a function 
@@ -534,6 +535,74 @@ const getUserChannelProfile = asyncHandler(async(req,res)=>{
 })
 
 
+
+// mongodb aggregate  nested function 
+const getWatchHistory = asyncHandler(async(req,res)=>{
+    //  req.user._id // we get string of numbers as id because of mongoose (ODM) but it will work in background with mongodb like  mongodb id = ObjectId('4234324')
+   
+   // Inside aggregate function mongoose does not work , aggregate function directly go toward mongodb
+    const user = await User.aggregate([ // aggregate will return whole data in 0th index position
+        {
+          $match:{ // req.user._id can not be used because mongoose does not work inside aggregate
+            _id: new mongoose.Types.ObjectId(req.user._id)
+          }
+        },
+        {
+           $lookup:{ // ------------to get all data of video schema  that is matched in watchHistory id  of User and _id of video
+            from:"videos", // collection name plural and small letter 
+            localField:"watchHistory", // field in user's watchhistory
+            foreignField:"_id", // id from videos model
+            as:"watchHistory",   // take data of watchHistory and foreignField's _id matched value in it so it will have videos data in it on 0th index of user 
+          
+            //writing pipeline on above matched data videos  obtained to get data of owner field which is available as id  in video schema   also populate method is available
+            pipeline:[ //------------ can give multiple pipelines inside pipelines like this
+              {
+                 $lookup:{
+                  from:"users",
+                  localField:"owner",// owner is having id stored 
+                  foreignField:"_id",
+                  as:"owner", // this lookup data stored in owner in this field 
+                  pipeline:[ //---- creating another pipeline to shwo  required fields of this found owner's data only
+                     {
+                        $project:{ // only need three things of owner's data obtained
+                               fullName:1,
+                               username:1,
+                               avatar:1
+                  
+                        }
+                     }
+                  ]
+
+                 }
+              }, // this  owner created data will be obtained as will be an array with values in oth index which is little addon work for frontend developer that's why adding below pipeline
+              {
+                $addFields:{ 
+                  owner:{ // to get the values fron array's 0th index so declaring new owner field to store that first or 0th indexed values since same name so it will overide the owner field but can be accessed using . dot
+                    $first: "$owner" // 0th indexed value can be accessed using first also 
+                  }
+                }
+
+              }
+
+            ]
+          } 
+        },
+       
+    ])
+
+    if(!user?.length){//nothing obtained
+        throw new ApiError(404, "Nothing in Watch History");
+    }
+
+    return res.status(200)
+    .json(
+      new ApiResponse(200,
+        user[0].watchHistory,
+        "Watch history fetched Successfully ")
+    )
+
+})
+
 export {
   registerUser,
   loginUser,
@@ -544,7 +613,8 @@ export {
   updateAccountDetails,
   updateUserAvatar,
   updateUserCoverImage,
-  getUserChannelProfile
+  getUserChannelProfile,
+  getWatchHistory
 
 
 }

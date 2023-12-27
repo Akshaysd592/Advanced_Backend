@@ -417,6 +417,7 @@ const updateUserAvatar = asyncHandler( async(req,res)=>{
 })
 
 
+
 const updateUserCoverImage = asyncHandler( async(req,res)=>{
       try {
          // taking single file in multer middleware 
@@ -453,7 +454,84 @@ const updateUserCoverImage = asyncHandler( async(req,res)=>{
       }
 })
 
+// mongodb aggregate function used 
+const getUserChannelProfile = asyncHandler(async(req,res)=>{
+ // visiting which channel getting that channel information and just getting the subscriber and subscribed count with whether I have subscribed it
+    const {username} = req.params; // getting username of the channel which we have visited now for example : codewithakshay channel click 
+                                    // so if on codewithakshay channel then below whole code work for codewithakshay channel get 
+                                    // take small example to understand 
+    if(!username){
+       throw new ApiError(400,"Username is missing")
+    }
 
+     // aggregate takes array and returns array
+   const channel =  await User.aggregate([
+      {
+        $match:{
+          username: username?.toLowerCase()
+        }
+      },// stage 1 to match
+      {  // To get how subscriber do I have 
+        $lookup:{// lookup will check the data from another collection for current data
+            from:"subscriptions",// from subscriptions collection
+            localField:"_id", // username field to be matched 
+            foreignField:"channel",// check usename same in channel field
+            as:"subscribers"
+
+        }
+      }, // to get field with channel name as username  stage 2 
+      { // To get whome I have subscribed
+         $lookup:{
+            from:"subscriptions",
+            localField:"_id",
+            foreignField:"subscriber",// find whome I have subscribed
+            as:"subscribedTo" 
+         }
+      }, // to get field with subscriber name as usename stage 3 
+      { //additional fields will be added in User --------------------
+        $addFields:{
+          subscribersCount:{
+              $size:"$subscribers"// from  2nd stage used $ since it is field now 
+          },
+          channelsSubscripbedToCount:{
+              $size:"$subscribedTo"
+          },
+          isSubscribed:{// for subscribe button 
+              $cond:{
+                if:{$in:[req.user?._id, "$subscribers.subscriber"]}, //checking my account id  is in the field of subscriber of current  channel selected whose name is taken from req.params  
+                then:true,// if available user then true in isSubscribed
+                else:false // else put false
+
+              }
+          }
+        }
+      }, // fields added stage 4 
+      {
+         $project:{// to show selected data only exa. fullName
+            fullName:1,
+            username:1,
+            subscribersCount:1,
+            channelsSubscripbedToCount:1,
+            isSubscribed:1,
+            avatar:1,
+            coverImage:1,
+            email:1
+
+
+         }
+      } // which data to be shown stagen 5
+    ])
+
+
+    if(!channel?.length){
+      throw new ApiError(404,"Channel does not exists")
+    } // channel return an array
+
+    return res.status(200).json(
+      new ApiResponse(200,channel[0],"User channel fetched successfully")
+    )
+    
+})
 
 
 export {
@@ -465,7 +543,8 @@ export {
   getCurrentUser,
   updateAccountDetails,
   updateUserAvatar,
-  updateUserCoverImage
+  updateUserCoverImage,
+  getUserChannelProfile
 
 
 }
